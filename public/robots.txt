@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /cont/
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://zonaro.ro/sitemap.xml
