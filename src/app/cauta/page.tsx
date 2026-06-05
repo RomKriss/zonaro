@@ -2,7 +2,6 @@ import { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { BusinessCard } from '@/components/business/BusinessCard';
 import { Button } from '@/components/ui/Button';
-import { CardSkeleton } from '@/components/ui/LoadingSpinner';
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { JUDETE } from '@/lib/utils';
@@ -38,7 +37,8 @@ async function searchBusinesses(params: SearchParams) {
     .eq('status', 'active');
 
   if (params.q) {
-    query = query.or(`name.ilike.%${params.q}%,description_short.ilike.%${params.q}%`);
+    const searchTerm = `%${params.q}%`;
+    query = query.or(`name.ilike.${searchTerm},description_short.ilike.${searchTerm}`);
   }
   if (params.category) {
     const { data: cat } = await supabase.from('categories').select('id').eq('slug', params.category).single();
@@ -65,7 +65,7 @@ async function searchBusinesses(params: SearchParams) {
 
   query = query.range(offset, offset + PER_PAGE - 1);
 
-  const { data, count, error } = await query;
+  const { data, count } = await query;
   return { businesses: (data ?? []) as Business[], total: count ?? 0, page };
   } catch {
     return { businesses: [], total: 0, page: 1 };
