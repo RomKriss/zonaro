@@ -3,10 +3,14 @@ import { createClient } from '@/lib/supabase/server';
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) redirect('/autentificare');
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) redirect('/autentificare');
+  } catch (e: any) {
+    if (e?.digest) throw e; // re-throw redirect
+    redirect('/autentificare');
+  }
 
   return (
     <div className="container-page py-8">
