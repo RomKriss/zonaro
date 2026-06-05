@@ -1,40 +1,69 @@
 import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 import { Building2, Users, Star, DollarSign, Clock } from 'lucide-react';
 
 async function getAdminStats() {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const [
-    { count: totalBiz },
-    { count: activeBiz },
-    { count: pendingBiz },
-    { count: pendingReviews },
-    { data: subs },
-  ] = await Promise.all([
-    supabase.from('businesses').select('id', { count: 'exact' }).then((r) => ({ count: r.count ?? 0 })),
-    supabase.from('businesses').select('id', { count: 'exact' }).eq('status', 'active').then((r) => ({ count: r.count ?? 0 })),
-    supabase.from('businesses').select('id', { count: 'exact' }).eq('status', 'pending').then((r) => ({ count: r.count ?? 0 })),
-    supabase.from('reviews').select('id', { count: 'exact' }).eq('status', 'pending').then((r) => ({ count: r.count ?? 0 })),
-    supabase.from('subscriptions').select('amount').eq('status', 'active').then((r) => ({ data: r.data ?? [] })),
-  ]);
+    const [
+      { count: totalBiz },
+      { count: activeBiz },
+      { count: pendingBiz },
+      { count: pendingReviews },
+      { data: subs },
+    ] = await Promise.all([
+      supabase.from('businesses').select('id', { count: 'exact' }).then((r) => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
+      supabase.from('businesses').select('id', { count: 'exact' }).eq('status', 'active').then((r) => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
+      supabase.from('businesses').select('id', { count: 'exact' }).eq('status', 'pending').then((r) => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
+      supabase.from('reviews').select('id', { count: 'exact' }).eq('status', 'pending').then((r) => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
+      supabase.from('subscriptions').select('amount').eq('status', 'active').then((r) => ({ data: r.data ?? [] })).catch(() => ({ data: [] })),
+    ]);
 
-  const monthlyRevenue = subs.reduce((s: number, sub: any) => s + (sub.amount ?? 0), 0);
+    const monthlyRevenue = subs.reduce((s: number, sub: any) => s + (sub.amount ?? 0), 0);
 
-  return { totalBiz, activeBiz, pendingBiz, pendingReviews, monthlyRevenue };
+    return { totalBiz, activeBiz, pendingBiz, pendingReviews, monthlyRevenue };
+  } catch {
+    return { totalBiz: 0, activeBiz: 0, pendingBiz: 0, pendingReviews: 0, monthlyRevenue: 0 };
+  }
 }
 
 async function getRecentBusinesses() {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('businesses')
+      .select('id, name, city, county, plan, status, created_at')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function checkAdminAuth() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from('businesses')
-    .select('id, name, city, county, plan, status, created_at')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false })
-    .limit(10);
-  return data ?? [];
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/autentificare');
+  }
+
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (userData?.role !== 'admin') {
+    redirect('/');
+  }
 }
 
 export default async function AdminDashboard() {
+  await checkAdminAuth();
   const [stats, pending] = await Promise.all([getAdminStats(), getRecentBusinesses()]);
 
   const STAT_CARDS = [
