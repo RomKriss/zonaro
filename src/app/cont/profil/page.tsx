@@ -14,27 +14,27 @@ import type { Business } from '@/types';
 
 const schema = z.object({
   name:              z.string().min(2, 'Minim 2 caractere'),
-  phone:             z.string().min(10, 'Telefon invalid').optional().or(z.literal('')),
+  phone:             z.string().optional().or(z.literal('')),
   email:             z.string().email('Email invalid').optional().or(z.literal('')),
   website:           z.string().url('URL invalid').optional().or(z.literal('')),
   address:           z.string().optional(),
   city:              z.string().min(2, 'Introdu orașul'),
   county:            z.string().min(2, 'Selectează județul'),
-  description_short: z.string().max(900, 'Maxim 150 cuvinte'),
-  description_long:  z.string().max(15000, 'Maxim 2000 cuvinte').optional(),
+  description_short: z.string().max(5000, 'Prea lung').optional().or(z.literal('')),
+  description_long:  z.string().max(50000, 'Prea lung').optional().or(z.literal('')),
   youtube_url:       z.string().url('URL YouTube invalid').optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof schema>;
 
 export default function ProfilPage() {
-  const [biz, setBiz] = useState<Business | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saved, setSaved] = useState(false);
+  const [biz, setBiz]             = useState<Business | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [saved, setSaved]         = useState(false);
   const [saveError, setSaveError] = useState('');
   const supabase = createClient();
 
-  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting, isDirty } } = useForm<FormData>({
+  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
@@ -45,17 +45,29 @@ export default function ProfilPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from('businesses').select('*').eq('user_id', user.id).single();
+
+      // Upsert user în public.users — fix pentru conturi create înainte de migrare
+      await supabase.from('users').upsert(
+        { id: user.id, email: user.email ?? '', role: 'business' },
+        { onConflict: 'id', ignoreDuplicates: true }
+      );
+
+      const { data } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
       if (data) {
         setBiz(data);
         reset({
-          name:              data.name,
+          name:              data.name ?? '',
           phone:             data.phone ?? '',
           email:             data.email ?? '',
           website:           data.website ?? '',
           address:           data.address ?? '',
-          city:              data.city,
-          county:            data.county,
+          city:              data.city ?? '',
+          county:            data.county ?? '',
           description_short: data.description_short ?? '',
           description_long:  data.description_long ?? '',
           youtube_url:       data.youtube_url ?? '',
@@ -68,13 +80,38 @@ export default function ProfilPage() {
   const onSubmit = async (data: FormData) => {
     setSaveError('');
     setSaved(false);
+
+    if (!biz?.id) {
+      setSaveError('Nu există o firmă asociată contului tău.');
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setSaveError('Nu ești autentificat. Reîncarcă pagina.');
+      return;
+    }
+
     const { error } = await supabase
       .from('businesses')
-      .update({ ...data, updated_at: new Date().toISOString() })
-      .eq('id', biz!.id);
+      .update({
+        name:              data.name,
+        phone:             data.phone || null,
+        email:             data.email || null,
+        website:           data.website || null,
+        address:           data.address || null,
+        city:              data.city,
+        county:            data.county,
+        description_short: data.description_short || null,
+        description_long:  data.description_long || null,
+        youtube_url:       data.youtube_url || null,
+        updated_at:        new Date().toISOString(),
+      })
+      .eq('id', biz.id)
+      .eq('user_id', user.id);
 
     if (error) {
-      setSaveError('Eroare la salvare. Încearcă din nou.');
+      setSaveError(`Eroare: ${error.message}`);
     } else {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -82,6 +119,18 @@ export default function ProfilPage() {
   };
 
   if (loading) return <PageLoader text="Se încarcă profilul..." />;
+
+  if (!biz) {
+    return (
+      <div className="card p-8 text-center">
+        <AlertCircle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
+        <h2 className="font-semibold text-gray-900 mb-2">Nu ai o firmă asociată</h2>
+        <p className="text-gray-500 text-sm">
+          Contul tău nu are o firmă asociată. Contactează suportul.
+        </p>
+      </div>
+    );
+  }
 
   const shortWords = countWords(shortDesc);
   const longWords  = countWords(longDesc);
@@ -96,7 +145,6 @@ export default function ProfilPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Informații de bază */}
         <div className="card p-6 space-y-5">
           <h2 className="font-semibold text-gray-900">Informații de bază</h2>
 
@@ -117,7 +165,6 @@ export default function ProfilPage() {
           />
         </div>
 
-        {/* Locație */}
         <div className="card p-6 space-y-5">
           <h2 className="font-semibold text-gray-900">Locație</h2>
           <Input {...register('address')} label="Adresa completă" placeholder="Str. Exemplu nr. 1" error={errors.address?.message} />
@@ -133,7 +180,6 @@ export default function ProfilPage() {
           </div>
         </div>
 
-        {/* Descriere */}
         <div className="card p-6 space-y-5">
           <h2 className="font-semibold text-gray-900">Descriere</h2>
 
@@ -172,7 +218,6 @@ export default function ProfilPage() {
           )}
         </div>
 
-        {/* Video YouTube */}
         {(biz?.plan === 'pro' || biz?.plan === 'elite') && (
           <div className="card p-6">
             <h2 className="font-semibold text-gray-900 mb-4">Video YouTube</h2>
@@ -186,7 +231,6 @@ export default function ProfilPage() {
           </div>
         )}
 
-        {/* Save feedback */}
         {saved && (
           <div className="flex items-center gap-2 text-green-700 bg-green-50 px-4 py-3 rounded-xl text-sm">
             <CheckCircle2 className="h-4 w-4" />
@@ -201,7 +245,7 @@ export default function ProfilPage() {
         )}
 
         <div className="flex gap-3">
-          <Button type="submit" loading={isSubmitting} disabled={!isDirty}>
+          <Button type="submit" loading={isSubmitting}>
             Salvează modificările
           </Button>
           <Button type="button" variant="ghost" onClick={() => reset()}>

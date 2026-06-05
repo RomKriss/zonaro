@@ -9,73 +9,67 @@ import type { Business } from '@/types';
 
 const PER_PAGE = 20;
 
-interface SearchParams {
-  q?: string;
-  category?: string;
-  county?: string;
-  city?: string;
-  verified?: string;
-  min_rating?: string;
-  sort?: string;
-  page?: string;
+type RawSearchParams = { [key: string]: string | string[] | undefined };
+
+function getString(val: string | string[] | undefined): string | undefined {
+  if (Array.isArray(val)) return val[0];
+  return val;
 }
 
-async function searchBusinesses(params: SearchParams) {
+async function searchBusinesses(params: RawSearchParams) {
   try {
-  const supabase = await createClient();
-  const page = parseInt(params.page ?? '1', 10);
-  const offset = (page - 1) * PER_PAGE;
+    const supabase = await createClient();
 
-  let query = supabase
-    .from('businesses')
-    .select(`
-      *,
-      category:categories(name, slug),
-      photos(url, is_primary),
-      services(id, name)
-    `, { count: 'exact' })
-    .eq('status', 'active');
+    const q       = getString(params.q);
+    const category = getString(params.category);
+    const county  = getString(params.county);
+    const city    = getString(params.city);
+    const verified = getString(params.verified);
+    const sort    = getString(params.sort) ?? 'relevance';
+    const pageNum = parseInt(getString(params.page) ?? '1', 10);
+    const offset  = (pageNum - 1) * PER_PAGE;
 
-  if (params.q) {
-    const searchTerm = `%${params.q}%`;
-    query = query.or(`name.ilike.${searchTerm},description_short.ilike.${searchTerm}`);
-  }
-  if (params.category) {
-    const { data: cat } = await supabase.from('categories').select('id').eq('slug', params.category).single();
-    if (cat) query = query.eq('category_id', cat.id);
-  }
-  if (params.county) {
-    query = query.ilike('county', `%${params.county.replace(/-/g, ' ')}%`);
-  }
-  if (params.city) {
-    query = query.ilike('city', `%${params.city.replace(/-/g, ' ')}%`);
-  }
-  if (params.verified === 'true') {
-    query = query.eq('verified', true);
-  }
+    let query = supabase
+      .from('businesses')
+      .select('*, category:categories(name, slug), photos(url, is_primary), services(id, name)', { count: 'exact' })
+      .eq('status', 'active');
 
-  // Sortare — Elite și Pro primii
-  const sort = params.sort ?? 'relevance';
-  if (sort === 'alphabetic') {
-    query = query.order('name');
-  } else {
-    // Plan descrescător (elite > pro > plus > free)
-    query = query.order('plan', { ascending: false }).order('verified', { ascending: false });
-  }
+    if (q) {
+      query = query.or(`name.ilike.%${q}%,description_short.ilike.%${q}%`);
+    }
+    if (category) {
+      const { data: cat } = await supabase.from('categories').select('id').eq('slug', category).single();
+      if (cat) query = query.eq('category_id', cat.id);
+    }
+    if (county) {
+      query = query.ilike('county', `%${county.replace(/-/g, ' ')}%`);
+    }
+    if (city) {
+      query = query.ilike('city', `%${city.replace(/-/g, ' ')}%`);
+    }
+    if (verified === 'true') {
+      query = query.eq('verified', true);
+    }
 
-  query = query.range(offset, offset + PER_PAGE - 1);
+    if (sort === 'alphabetic') {
+      query = query.order('name');
+    } else {
+      query = query.order('plan', { ascending: false }).order('verified', { ascending: false });
+    }
 
-  const { data, count } = await query;
-  return { businesses: (data ?? []) as Business[], total: count ?? 0, page };
+    query = query.range(offset, offset + PER_PAGE - 1);
+
+    const { data, count } = await query;
+    return { businesses: (data ?? []) as Business[], total: count ?? 0, page: pageNum };
   } catch {
     return { businesses: [], total: 0, page: 1 };
   }
 }
 
-export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
-  const parts = [];
-  if (searchParams.q) parts.push(searchParams.q);
-  if (searchParams.county) parts.push(searchParams.county.replace(/-/g, ' '));
+export async function generateMetadata({ searchParams }: { searchParams: RawSearchParams }): Promise<Metadata> {
+  const q      = getString(searchParams.q);
+  const county = getString(searchParams.county);
+  const parts  = [q, county?.replace(/-/g, ' ')].filter(Boolean);
 
   return {
     title: parts.length > 0
@@ -84,14 +78,23 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
   };
 }
 
-export default async function SearchPage({ searchParams }: { searchParams: SearchParams }) {
+export default async function SearchPage({ searchParams }: { searchParams: RawSearchParams }) {
   const { businesses, total, page } = await searchBusinesses(searchParams);
   const totalPages = Math.ceil(total / PER_PAGE);
 
+  const q      = getString(searchParams.q);
+  const county = getString(searchParams.county);
+  const verified = getString(searchParams.verified);
+  const sort   = getString(searchParams.sort);
+
   const buildPageUrl = (p: number) => {
-    const params = new URLSearchParams(searchParams as any);
-    params.set('page', String(p));
-    return `/cauta?${params.toString()}`;
+    const ps = new URLSearchParams();
+    if (q)       ps.set('q', q);
+    if (county)  ps.set('county', county);
+    if (verified) ps.set('verified', verified);
+    if (sort)    ps.set('sort', sort);
+    ps.set('page', String(p));
+    return `/cauta?${ps.toString()}`;
   };
 
   return (
@@ -105,7 +108,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
               Filtre
             </div>
 
-            {/* Căutare text */}
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
                 Cuvânt cheie
@@ -115,21 +117,20 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
                 <input
                   type="text"
                   name="q"
-                  defaultValue={searchParams.q}
+                  defaultValue={q}
                   placeholder="Firmă sau serviciu..."
                   className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
             </div>
 
-            {/* Județ */}
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
                 Județ
               </label>
               <select
                 name="county"
-                defaultValue={searchParams.county ?? ''}
+                defaultValue={county ?? ''}
                 className="w-full py-2.5 px-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="">Toate județele</option>
@@ -141,14 +142,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
               </select>
             </div>
 
-            {/* Verificate */}
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="verified"
                 name="verified"
                 value="true"
-                defaultChecked={searchParams.verified === 'true'}
+                defaultChecked={verified === 'true'}
                 className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
               />
               <label htmlFor="verified" className="text-sm text-gray-700">
@@ -156,14 +156,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
               </label>
             </div>
 
-            {/* Sortare */}
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
                 Sortare
               </label>
               <select
                 name="sort"
-                defaultValue={searchParams.sort ?? 'relevance'}
+                defaultValue={sort ?? 'relevance'}
                 className="w-full py-2.5 px-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="relevance">Relevanță</option>
@@ -175,10 +174,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
               Aplică Filtrele
             </Button>
 
-            <Link
-              href="/cauta"
-              className="block text-center text-xs text-gray-500 hover:text-gray-700"
-            >
+            <Link href="/cauta" className="block text-center text-xs text-gray-500 hover:text-gray-700">
               Resetează filtrele
             </Link>
           </form>
@@ -186,14 +182,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
 
         {/* Rezultate */}
         <div className="flex-1 min-w-0">
-          {/* Header rezultate */}
           <div className="flex items-center justify-between mb-5">
             <p className="text-sm text-gray-600">
               {total > 0 ? (
                 <>
                   <span className="font-semibold text-gray-900">{total.toLocaleString('ro-RO')}</span>
                   {' '}firme găsite
-                  {searchParams.q && <> pentru „<strong>{searchParams.q}</strong>"</>}
+                  {q && <> pentru „<strong>{q}</strong>"</>}
                 </>
               ) : (
                 'Nicio firmă găsită'
@@ -220,7 +215,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
             </div>
           )}
 
-          {/* Paginare */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-8">
               {page > 1 && (
@@ -231,26 +225,20 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
                   </Button>
                 </Link>
               )}
-
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
                   const p = i + 1;
                   return (
                     <Link key={p} href={buildPageUrl(p)}>
-                      <button
-                        className={`h-9 w-9 rounded-lg text-sm font-medium transition-colors ${
-                          p === page
-                            ? 'bg-brand-700 text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
+                      <button className={`h-9 w-9 rounded-lg text-sm font-medium transition-colors ${
+                        p === page ? 'bg-brand-700 text-white' : 'text-gray-600 hover:bg-gray-100'
+                      }`}>
                         {p}
                       </button>
                     </Link>
                   );
                 })}
               </div>
-
               {page < totalPages && (
                 <Link href={buildPageUrl(page + 1)}>
                   <Button variant="outline" size="sm">

@@ -2,24 +2,28 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { Building2, Users, Star, DollarSign, Clock } from 'lucide-react';
 
+async function safeCount(query: PromiseLike<{ count: number | null; data: any; error: any }>): Promise<number> {
+  try {
+    const { count } = await query;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 async function getAdminStats() {
   try {
     const supabase = await createClient();
 
-    const [
-      { count: totalBiz },
-      { count: activeBiz },
-      { count: pendingBiz },
-      { count: pendingReviews },
-      { data: subs },
-    ] = await Promise.all([
-      supabase.from('businesses').select('id', { count: 'exact' }).then((r) => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
-      supabase.from('businesses').select('id', { count: 'exact' }).eq('status', 'active').then((r) => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
-      supabase.from('businesses').select('id', { count: 'exact' }).eq('status', 'pending').then((r) => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
-      supabase.from('reviews').select('id', { count: 'exact' }).eq('status', 'pending').then((r) => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
-      supabase.from('subscriptions').select('amount').eq('status', 'active').then((r) => ({ data: r.data ?? [] })).catch(() => ({ data: [] })),
+    const [totalBiz, activeBiz, pendingBiz, pendingReviews, subsResult] = await Promise.all([
+      safeCount(supabase.from('businesses').select('id', { count: 'exact', head: true })),
+      safeCount(supabase.from('businesses').select('id', { count: 'exact', head: true }).eq('status', 'active')),
+      safeCount(supabase.from('businesses').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+      safeCount(supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+      supabase.from('subscriptions').select('amount').eq('status', 'active'),
     ]);
 
+    const subs = subsResult.data ?? [];
     const monthlyRevenue = subs.reduce((s: number, sub: any) => s + (sub.amount ?? 0), 0);
 
     return { totalBiz, activeBiz, pendingBiz, pendingReviews, monthlyRevenue };
@@ -44,20 +48,25 @@ async function getRecentBusinesses() {
 }
 
 async function checkAdminAuth() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/autentificare');
-  }
+    if (!user) {
+      redirect('/autentificare');
+    }
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-  if (userData?.role !== 'admin') {
+    if (userData?.role !== 'admin') {
+      redirect('/');
+    }
+  } catch (e: any) {
+    if (e?.digest) throw e; // re-throw redirect
     redirect('/');
   }
 }
@@ -93,7 +102,6 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      {/* Firme în așteptare */}
       {pending.length > 0 && (
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
@@ -109,10 +117,7 @@ export default async function AdminDashboard() {
                   <p className="text-sm font-medium text-gray-900">{biz.name}</p>
                   <p className="text-xs text-gray-500">{biz.city}, {biz.county}</p>
                 </div>
-                <a
-                  href={`/admin/firme/${biz.id}`}
-                  className="text-xs text-brand-700 font-medium hover:underline"
-                >
+                <a href={`/admin/firme/${biz.id}`} className="text-xs text-brand-700 font-medium hover:underline">
                   Verifică
                 </a>
               </div>
