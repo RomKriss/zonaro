@@ -75,7 +75,7 @@ export default function RegisterPage() {
       city:       data.city,
       county:     data.county,
       cui:        data.cui || null,
-      status:     'pending',
+      status:     'active',
       plan:       'free',
     });
 
