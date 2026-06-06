@@ -7,8 +7,9 @@ import { ReviewSection } from '@/components/business/ReviewSection';
 import { Badge } from '@/components/ui/Badge';
 import { RatingDisplay } from '@/components/ui/StarRating';
 import { Button } from '@/components/ui/Button';
-import { MapPin, Phone, Mail, Globe, CheckCircle2, Share2, Flag, ChevronRight } from 'lucide-react';
+import { MapPin, Phone, Mail, Globe, CheckCircle2, Share2, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { ReportFraudButton } from '@/components/business/ReportFraudModal';
 import type { Business, Review } from '@/types';
 
 interface PageProps {
@@ -157,9 +158,6 @@ export default async function BusinessProfilePage({ params }: PageProps) {
                 <div className="flex gap-2">
                   <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500" title="Distribuie">
                     <Share2 className="h-4 w-4" />
-                  </button>
-                  <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500" title="Raportează">
-                    <Flag className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -317,6 +315,13 @@ export default async function BusinessProfilePage({ params }: PageProps) {
                     Revendică Profilul
                   </Button>
                 </Link>
+              </div>
+            )}
+
+            {/* Raportare fraudă — vizibil doar pentru firme active/revendicate */}
+            {(biz.status === 'active') && (
+              <div className="px-1">
+                <ReportFraudButton businessId={biz.id} businessName={biz.name} />
               </div>
             )}
           </div>

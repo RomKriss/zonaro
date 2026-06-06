@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   // Asociază firma cu utilizatorul
   const { data: biz } = await supabase
     .from('businesses')
-    .update({ user_id: userId, status: 'pending' })
+    .update({ user_id: userId, status: 'active' })
     .eq('id', business_id)
     .select('name')
     .single();

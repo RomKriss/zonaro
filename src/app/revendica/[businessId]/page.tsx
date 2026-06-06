@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { CheckCircle2, Mail, Shield, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 type Step = 'email' | 'code' | 'done';
 
@@ -15,12 +16,13 @@ export default function ClaimPage() {
   const businessId = params.businessId as string;
   const supabase = createClient();
 
-  const [biz, setBiz] = useState<any>(null);
-  const [step, setStep] = useState<Step>('email');
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [biz, setBiz]           = useState<any>(null);
+  const [step, setStep]         = useState<Step>('email');
+  const [email, setEmail]       = useState('');
+  const [code, setCode]         = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [agreed, setAgreed]     = useState(false);
 
   useEffect(() => {
     supabase.from('businesses').select('name, city, county').eq('id', businessId).single()
@@ -117,13 +119,31 @@ export default function ClaimPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="firma@email.ro"
               />
+
+              {/* Checkbox termeni */}
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 flex-shrink-0"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  Confirm că sunt reprezentant legal al acestei firme și am citit{' '}
+                  <Link href="/termeni" target="_blank" className="text-brand-700 underline hover:text-brand-900">
+                    Termenii și Condițiile ZonaRo
+                  </Link>
+                  .
+                </span>
+              </label>
+
               {error && (
                 <div className="flex items-center gap-2 text-red-700 bg-red-50 px-3 py-2 rounded-xl text-sm">
                   <AlertCircle className="h-4 w-4" />
                   {error}
                 </div>
               )}
-              <Button fullWidth loading={loading} onClick={handleSendCode} disabled={!email}>
+              <Button fullWidth loading={loading} onClick={handleSendCode} disabled={!email || !agreed}>
                 <Mail className="h-4 w-4" />
                 Trimite codul de verificare
               </Button>
@@ -176,9 +196,6 @@ export default function ClaimPage() {
               <h3 className="text-xl font-bold text-gray-900">Profil revendicat!</h3>
               <p className="text-gray-500 text-sm">
                 Contul tău a fost creat și profilul firmei a fost asociat. Vei fi redirecționat la dashboard în câteva secunde.
-              </p>
-              <p className="text-xs text-gray-400">
-                Un administrator ZonaRo va verifica și activa profilul tău în scurt timp.
               </p>
             </div>
           )}
