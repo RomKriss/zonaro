@@ -166,7 +166,9 @@ export async function POST(req: NextRequest) {
       const { business_id, plan, billing_period } = sub.metadata ?? {};
       if (!business_id || !plan) break;
 
-      const expiresAt = new Date(sub.current_period_end * 1000).toISOString();
+      const expiresAt = sub.current_period_end
+        ? new Date(sub.current_period_end * 1000).toISOString()
+        : getExpiresAt(billing_period ?? 'monthly');
       await supabase.from('businesses')
         .update({ plan, plan_expires_at: expiresAt })
         .eq('id', business_id);
