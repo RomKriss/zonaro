@@ -39,11 +39,11 @@ export function HeroSearch() {
         </div>
 
         <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">
-          Găsește firme și meșteri de încredere
-          <span className="block text-accent-400">în Moldova și estul României</span>
+          Directorul de firme și meșteri verificați
+          <span className="block text-accent-400">din estul României</span>
         </h1>
         <p className="text-lg md:text-xl text-blue-200 mb-10 max-w-2xl mx-auto">
-          Directorul online cu firme verificate din Iași, Galați, Bacău, Vaslui și toată zona de est.
+          Conectăm clienții cu furnizorii locali de servicii — rapid, transparent și de pe orice dispozitiv.
         </p>
 
         {/* Search bar */}

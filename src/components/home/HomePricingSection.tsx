@@ -143,7 +143,7 @@ export function HomePricingSection() {
             <div
               key={plan.id}
               className={cn(
-                'relative rounded-2xl border-2 bg-white p-6 flex flex-col transition-all duration-200 hover:-translate-y-1',
+                'relative rounded-2xl border-2 bg-white p-4 md:p-6 flex flex-col transition-all duration-200 hover:-translate-y-1',
                 plan.popular ? `${styles.border} shadow-xl` : `${styles.border} shadow-card`
               )}
             >
@@ -160,12 +160,12 @@ export function HomePricingSection() {
                 <Icon className="h-5 w-5" />
               </div>
 
-              <div className="mb-1 font-bold text-gray-900 text-lg">{plan.name}</div>
+              <div className="mb-1 font-bold text-gray-900 text-base md:text-lg">{plan.name}</div>
 
               <div className="mb-4">
                 {plan.id === 'free' ? (
                   <div>
-                    <span className="text-3xl font-extrabold text-gray-900">Gratuit</span>
+                    <span className="text-2xl md:text-3xl font-extrabold text-gray-900">Gratuit</span>
                     <p className="text-xs text-green-600 font-semibold mt-0.5">Fără card · Fără limită</p>
                   </div>
                 ) : plan.id === 'plus' && billing === 'monthly' && promoActive ? (
@@ -180,8 +180,8 @@ export function HomePricingSection() {
                 ) : (
                   <>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-extrabold text-gray-900">{price}</span>
-                      <span className="text-sm text-gray-500">RON/lună</span>
+                      <span className="text-2xl md:text-3xl font-extrabold text-gray-900">{price}</span>
+                      <span className="text-xs md:text-sm text-gray-500">RON/lună</span>
                     </div>
                     {billing === 'yearly' && (
                       <p className="text-xs text-green-600 font-semibold mt-0.5">

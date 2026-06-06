@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   HardHat, Wrench, Zap, Car, Heart, SmilePlus, Scale, Building2,
   Monitor, Scissors, UtensilsCrossed, GraduationCap, Truck,
@@ -28,7 +32,12 @@ const CATEGORIES = [
   { name: 'Altele', slug: 'alte-servicii', icon: MoreHorizontal, color: 'bg-gray-50 text-gray-600 group-hover:bg-gray-100' },
 ];
 
+const VISIBLE_DEFAULT = 8;
+
 export function CategoriesGrid() {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? CATEGORIES : CATEGORIES.slice(0, VISIBLE_DEFAULT);
+
   return (
     <section className="py-16 container-page">
       <div className="text-center mb-10">
@@ -37,7 +46,7 @@ export function CategoriesGrid() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {CATEGORIES.map((cat) => (
+        {visible.map((cat) => (
           <Link
             key={cat.slug}
             href={`/cauta?category=${cat.slug}`}
@@ -52,6 +61,29 @@ export function CategoriesGrid() {
           </Link>
         ))}
       </div>
+
+      {!expanded && (
+        <div className="text-center mt-6">
+          <button
+            onClick={() => setExpanded(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-all"
+          >
+            <ChevronDown className="h-4 w-4" />
+            Vezi toate categoriile ({CATEGORIES.length - VISIBLE_DEFAULT} mai multe)
+          </button>
+        </div>
+      )}
+      {expanded && (
+        <div className="text-center mt-6">
+          <button
+            onClick={() => setExpanded(false)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-all"
+          >
+            <ChevronUp className="h-4 w-4" />
+            Arată mai puține
+          </button>
+        </div>
+      )}
     </section>
   );
 }

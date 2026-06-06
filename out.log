@@ -8,3 +8,11 @@
 
  ✓ Starting...
  ✓ Ready in 6.3s
+ ○ Compiling /src/middleware ...
+ ✓ Compiled /src/middleware in 2.6s (125 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 10.8s (862 modules)
+ GET / 200 in 11671ms
+ ✓ Compiled in 1507ms (374 modules)
+ ✓ Compiled in 163ms (360 modules)
+ GET / 200 in 12501ms

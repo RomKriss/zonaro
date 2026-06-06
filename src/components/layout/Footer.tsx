@@ -16,14 +16,12 @@ const CATEGORY_LINKS = [
 ];
 
 const COUNTY_LINKS = [
-  { label: 'București', href: '/cauta?county=bucuresti' },
-  { label: 'Cluj', href: '/cauta?county=cluj' },
   { label: 'Iași', href: '/cauta?county=iasi' },
-  { label: 'Timiș', href: '/cauta?county=timis' },
-  { label: 'Constanța', href: '/cauta?county=constanta' },
-  { label: 'Brașov', href: '/cauta?county=brasov' },
   { label: 'Galați', href: '/cauta?county=galati' },
   { label: 'Bacău', href: '/cauta?county=bacau' },
+  { label: 'Vaslui', href: '/cauta?county=vaslui' },
+  { label: 'Suceava', href: '/cauta?county=suceava' },
+  { label: 'București', href: '/cauta?county=bucuresti' },
 ];
 
 export function Footer() {
@@ -74,6 +72,9 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li className="pt-1">
+                <span className="text-xs text-gray-500 italic">și multe altele în curând</span>
+              </li>
             </ul>
           </div>
 
@@ -82,9 +83,9 @@ export function Footer() {
             <h3 className="font-semibold text-white mb-4 text-sm uppercase tracking-wider">Planuri</h3>
             <ul className="space-y-2">
               <li><Link href="/preturi#start" className="text-sm hover:text-white transition-colors">Start — Gratuit</Link></li>
-              <li><Link href="/preturi#plus" className="text-sm hover:text-white transition-colors">Plus — 49 RON/lună</Link></li>
-              <li><Link href="/preturi#pro" className="text-sm hover:text-white transition-colors text-amber-400 font-medium">Pro — 99 RON/lună ⭐</Link></li>
-              <li><Link href="/preturi#elite" className="text-sm hover:text-white transition-colors">Elite — 199 RON/lună</Link></li>
+              <li><Link href="/preturi#plus" className="text-sm hover:text-white transition-colors">Plus — 34,99 RON/lună</Link></li>
+              <li><Link href="/preturi#pro" className="text-sm hover:text-white transition-colors text-amber-400 font-medium">Pro — 69,99 RON/lună ⭐</Link></li>
+              <li><Link href="/preturi#elite" className="text-sm hover:text-white transition-colors">Elite — 139,99 RON/lună</Link></li>
               <li className="pt-1">
                 <Link href="/preturi" className="text-sm text-brand-400 hover:text-brand-300 font-medium transition-colors">
                   Compară toate planurile →
