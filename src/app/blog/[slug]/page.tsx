@@ -21,10 +21,15 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export const revalidate = 60;
+export const dynamicParams = true;
 
 export async function generateStaticParams() {
-  const slugs = await sanityClient.fetch(postSlugsQuery).catch(() => []);
-  return slugs.map((s: { slug: string }) => ({ slug: s.slug }));
+  try {
+    const slugs = await sanityClient.fetch(postSlugsQuery);
+    return (slugs ?? []).map((s: { slug: string }) => ({ slug: s.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
