@@ -95,6 +95,28 @@ export async function POST(req: NextRequest) {
         await supabase.from('subscriptions')
           .update({ status: 'active', expires_at: expiresAt })
           .eq('stripe_subscription_id', subId);
+
+        // Trimite email cu link factură
+        const { data: biz } = await supabase
+          .from('businesses')
+          .select('name, email')
+          .eq('id', sub.business_id)
+          .single();
+
+        if (biz?.email && invoice.invoice_pdf) {
+          const amount = invoice.amount_paid / 100;
+          const currency = invoice.currency.toUpperCase();
+          const invoiceNumber = invoice.number ?? invoice.id;
+          const paidAt = new Date(invoice.created * 1000).toLocaleDateString('ro-RO', {
+            day: 'numeric', month: 'long', year: 'numeric',
+          });
+          await resend.emails.send({
+            from: FROM_EMAIL,
+            to: biz.email,
+            subject: `Factură ZonaRo — ${invoiceNumber}`,
+            html: emailInvoicePaid(biz.name, invoiceNumber, amount, currency, paidAt, invoice.invoice_pdf, invoice.hosted_invoice_url ?? ''),
+          }).catch(() => {});
+        }
       }
       break;
     }
@@ -239,6 +261,40 @@ function emailPaymentFailed(bizName: string, dashboardUrl: string): string {
     <a href="${dashboardUrl}" style="display:inline-block;margin-top:16px;padding:14px 28px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">
       Actualizează datele de plată
     </a>
+  </div>
+</div></body></html>`;
+}
+
+function emailInvoicePaid(
+  bizName: string,
+  invoiceNumber: string,
+  amount: number,
+  currency: string,
+  paidAt: string,
+  pdfUrl: string,
+  hostedUrl: string,
+): string {
+  return `<!DOCTYPE html>
+<html lang="ro"><head><meta charset="UTF-8"></head>
+<body style="font-family:Inter,sans-serif;background:#f8fafc;margin:0;padding:40px 20px;">
+<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+  <div style="background:#1e40af;padding:32px 40px;"><h1 style="color:#fff;margin:0;font-size:24px;">ZonaRo</h1></div>
+  <div style="padding:40px;">
+    <h2 style="color:#1e293b;margin:0 0 8px;">Factură ${invoiceNumber}</h2>
+    <p style="color:#475569;">Dragă <strong>${bizName}</strong>, plata a fost procesată cu succes.</p>
+    <div style="background:#f1f5f9;border-radius:8px;padding:16px;margin:20px 0;">
+      <p style="margin:0 0 6px;font-size:14px;color:#64748b;">Detalii factură:</p>
+      <p style="margin:0;font-weight:600;color:#1e293b;">Sumă: ${amount.toFixed(2)} ${currency}</p>
+      <p style="margin:4px 0 0;font-size:14px;color:#64748b;">Data plății: ${paidAt}</p>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;">
+      <a href="${pdfUrl}" style="display:inline-block;padding:12px 24px;background:#1e40af;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">
+        Descarcă factura PDF
+      </a>
+      ${hostedUrl ? `<a href="${hostedUrl}" style="display:inline-block;padding:12px 24px;background:#f1f5f9;color:#1e293b;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">
+        Vizualizează online
+      </a>` : ''}
+    </div>
   </div>
 </div></body></html>`;
 }

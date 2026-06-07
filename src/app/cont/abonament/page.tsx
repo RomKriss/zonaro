@@ -10,7 +10,7 @@ import { PageLoader } from '@/components/ui/LoadingSpinner';
 import {
   CheckCircle2, Zap, Crown, Star, Rocket,
   ArrowRight, AlertTriangle, ExternalLink,
-  CreditCard, Clock, TrendingUp, X, Check, Download, FileText
+  CreditCard, Clock, TrendingUp, X, Check, Download, FileText, Send
 } from 'lucide-react';
 import { PLANS, getPlanConfig, formatDate, cn } from '@/lib/utils';
 import type { Business } from '@/types';
@@ -68,6 +68,8 @@ export default function AbonamentPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [resendingInvoice, setResendingInvoice] = useState<string | null>(null);
+  const [resendSuccess, setResendSuccess] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -120,6 +122,22 @@ export default function AbonamentPage() {
     const data = await res.json();
     if (data.url) window.location.href = data.url;
     else setPortalLoading(false);
+  };
+
+  const handleResendInvoice = async (invoiceId: string) => {
+    setResendingInvoice(invoiceId);
+    setResendSuccess(null);
+    try {
+      await fetch('/api/stripe/resend-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoice_id: invoiceId }),
+      });
+      setResendSuccess(invoiceId);
+      setTimeout(() => setResendSuccess(null), 4000);
+    } finally {
+      setResendingInvoice(null);
+    }
   };
 
   const handleCancel = async () => {
@@ -304,17 +322,39 @@ export default function AbonamentPage() {
                       </span>
                     </td>
                     <td className="py-3 text-right">
-                      {inv.pdf_url && (
-                        <a
-                          href={inv.pdf_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs text-brand-700 hover:text-brand-900 font-medium hover:underline"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          PDF
-                        </a>
-                      )}
+                      <div className="flex items-center justify-end gap-3">
+                        {inv.pdf_url && (
+                          <a
+                            href={inv.pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-brand-700 hover:text-brand-900 font-medium hover:underline"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            PDF
+                          </a>
+                        )}
+                        {inv.status === 'paid' && (
+                          <button
+                            onClick={() => handleResendInvoice(inv.id)}
+                            disabled={resendingInvoice === inv.id}
+                            title="Retrimite factura pe email"
+                            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-brand-700 transition-colors disabled:opacity-50"
+                          >
+                            {resendSuccess === inv.id ? (
+                              <span className="text-green-600 flex items-center gap-1">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Trimis
+                              </span>
+                            ) : (
+                              <>
+                                <Send className="h-3.5 w-3.5" />
+                                {resendingInvoice === inv.id ? '...' : 'Email'}
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
