@@ -33,3 +33,12 @@ export const postBySlugQuery = groq`
 export const postSlugsQuery = groq`
   *[_type == "post" && defined(slug.current)] { "slug": slug.current }
 `;
+
+export const typographyQuery = groq`
+  *[_type == "typographySettings" && _id == "typographySettings"][0] {
+    h1Desktop, h2Desktop, h3Desktop, bodyDesktop, smallDesktop, btnDesktop, cardTitleDesktop, cardDescDesktop,
+    h1Mobile, h2Mobile, h3Mobile, bodyMobile, smallMobile, btnMobile,
+    blogH1, blogH2, blogH3, blogBody,
+    lineHeightBody, lineHeightHeading, headingWeight, bodyWeight,
+  }
+`;

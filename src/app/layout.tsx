@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CookieBanner } from '@/components/ui/CookieBanner';
 import { PromoBanner } from '@/components/ui/PromoBanner';
+import { TypographyInjector } from '@/components/layout/TypographyInjector';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -54,6 +55,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ro" className={inter.variable}>
+      <head>
+        <TypographyInjector />
+      </head>
       <body className="min-h-screen flex flex-col">
         <PromoBanner />
         <Header />

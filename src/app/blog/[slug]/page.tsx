@@ -123,12 +123,14 @@ export default async function BlogPostPage({ params }: PageProps) {
             )}
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
+          <h1 className="font-bold text-gray-900 mb-4" style={{ fontSize: 'var(--ty-blog-h1)', lineHeight: 'var(--ty-lh-heading)' }}>
             {post.title}
           </h1>
 
           {post.excerpt && (
-            <p className="text-lg text-gray-500 mb-8 leading-relaxed">{post.excerpt}</p>
+            <p className="text-gray-500 mb-8" style={{ fontSize: 'var(--ty-body)', lineHeight: 'var(--ty-lh-body)' }}>
+              {post.excerpt}
+            </p>
           )}
 
           {post.mainImage && (
@@ -146,11 +148,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 
           {/* Body */}
           {post.body && (
-            <div className="prose prose-lg prose-gray max-w-none
-              prose-headings:font-bold prose-headings:text-gray-900
-              prose-a:text-brand-700 prose-a:no-underline hover:prose-a:underline
-              prose-img:rounded-xl prose-blockquote:border-brand-400
-              prose-code:text-brand-700 prose-code:bg-brand-50 prose-code:px-1 prose-code:rounded">
+            <div className="blog-content text-gray-800">
               <PortableText value={post.body} components={ptComponents} />
             </div>
           )}
