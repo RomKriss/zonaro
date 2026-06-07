@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
-async function getAdminSupabase() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
-  return data?.role === 'admin' ? supabase : null;
+async function isAdmin(): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
+    return data?.role === 'admin';
+  } catch {
+    return false;
+  }
 }
 
 export async function GET(req: NextRequest) {
-  const supabase = await getAdminSupabase();
-  if (!supabase) return NextResponse.json({ error: 'Neautorizat' }, { status: 403 });
+  if (!(await isAdmin())) return NextResponse.json({ error: 'Neautorizat' }, { status: 403 });
+  const supabase = createServiceClient();
 
   const { data } = await supabase
     .from('waitlist')
