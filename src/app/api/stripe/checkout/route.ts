@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
+    customer_email: !customerId ? (biz.email ?? user.email ?? undefined) : undefined,
     payment_method_types: ['card'],
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
     subscription_data: {
       metadata: { business_id: businessId, plan, billing_period },
     },
+    receipt_email: biz.email ?? user.email ?? undefined,
     locale: 'ro',
   });
 
