@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Power, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Power, Save, AlertCircle, CheckCircle2, Database } from 'lucide-react';
 
 interface Settings {
   maintenance_mode: boolean;
@@ -10,32 +10,59 @@ interface Settings {
   waitlist_button_text: string;
 }
 
+const DEFAULT: Settings = {
+  maintenance_mode: false,
+  maintenance_title: 'Zonaro.ro este în pregătire',
+  maintenance_description: 'În curând firmele vor putea crea profiluri și vor putea fi listate în platformă.',
+  waitlist_button_text: 'Înscrie-te pe lista de așteptare',
+};
+
 export default function SetariPage() {
-  const [settings, setSettings] = useState<Settings>({
-    maintenance_mode: false,
-    maintenance_title: '',
-    maintenance_description: '',
-    waitlist_button_text: '',
-  });
+  const [settings, setSettings] = useState<Settings>(DEFAULT);
   const [loading, setLoading] = useState(true);
+  const [dbMissing, setDbMissing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [setupRunning, setSetupRunning] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [setupMsg, setSetupMsg] = useState('');
 
-  useEffect(() => {
+  const loadSettings = () => {
+    setLoading(true);
     fetch('/api/admin/settings')
       .then((r) => r.json())
       .then((data) => {
-        if (data) setSettings({
-          maintenance_mode: data.maintenance_mode ?? false,
-          maintenance_title: data.maintenance_title ?? '',
-          maintenance_description: data.maintenance_description ?? '',
-          waitlist_button_text: data.waitlist_button_text ?? '',
-        });
+        if (data && typeof data.maintenance_mode !== 'undefined') {
+          setSettings({ ...DEFAULT, ...data });
+          setDbMissing(false);
+        } else {
+          setDbMissing(true);
+        }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-  }, []);
+      .catch(() => { setDbMissing(true); setLoading(false); });
+  };
+
+  useEffect(() => { loadSettings(); }, []);
+
+  const handleSetup = async () => {
+    setSetupRunning(true);
+    setSetupMsg('');
+    try {
+      const res = await fetch('/api/admin/setup', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setSetupMsg('✅ Baza de date configurată! Se reîncarcă setările...');
+        setTimeout(() => { loadSettings(); setSetupMsg(''); }, 1500);
+      } else {
+        setSetupMsg(`⚠️ ${data.message}`);
+      }
+    } catch {
+      setSetupMsg('Eroare la configurarea automată.');
+    } finally {
+      setSetupRunning(false);
+    }
+  };
 
   const set = (key: keyof Settings) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -51,11 +78,15 @@ export default function SetariPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });
-      if (!res.ok) throw new Error();
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(`Eroare (${res.status}): ${body?.error ?? 'necunoscută'}`);
+        return;
+      }
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch {
-      setError('Eroare la salvare. Încearcă din nou.');
+    } catch (err: any) {
+      setError(`Eroare rețea: ${err?.message ?? 'necunoscută'}`);
     } finally {
       setSaving(false);
     }
@@ -63,6 +94,84 @@ export default function SetariPage() {
 
   if (loading) {
     return <div className="text-gray-400 text-sm">Se încarcă setările...</div>;
+  }
+
+  if (dbMissing) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Setări Site</h1>
+        </div>
+        <div className="card p-6 border-amber-200 bg-amber-50">
+          <div className="flex items-start gap-3 mb-4">
+            <Database className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h2 className="font-semibold text-amber-900">Baza de date nu este configurată</h2>
+              <p className="text-sm text-amber-700 mt-1">
+                Tabelele necesare (site_settings, waitlist) nu există. Apasă butonul de mai jos
+                pentru configurare automată, sau rulează manual SQL-ul din{' '}
+                <code className="bg-amber-100 px-1 rounded text-xs">supabase/maintenance_waitlist.sql</code>.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleSetup}
+            disabled={setupRunning}
+            className="flex items-center gap-2 px-5 py-2.5 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 transition-colors disabled:opacity-60"
+          >
+            {setupRunning ? (
+              <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Database className="h-4 w-4" />
+            )}
+            {setupRunning ? 'Se configurează...' : 'Configurează automat baza de date'}
+          </button>
+          {setupMsg && (
+            <p className="text-sm mt-3 text-amber-800">{setupMsg}</p>
+          )}
+          <details className="mt-4">
+            <summary className="text-xs text-amber-600 cursor-pointer hover:underline">
+              Alternativ: rulează manual în Supabase SQL Editor
+            </summary>
+            <div className="mt-3 bg-white rounded-xl border border-amber-200 p-4">
+              <p className="text-xs text-gray-500 mb-2">
+                Deschide{' '}
+                <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="text-brand-700 underline">
+                  supabase.com/dashboard
+                </a>{' '}
+                → proiectul tău → SQL Editor → New query → lipești:
+              </p>
+              <pre className="text-xs bg-gray-50 p-3 rounded-lg overflow-x-auto text-gray-700 whitespace-pre-wrap">
+{`CREATE TABLE IF NOT EXISTS site_settings (
+  id text PRIMARY KEY DEFAULT 'main',
+  maintenance_mode boolean NOT NULL DEFAULT false,
+  maintenance_title text NOT NULL DEFAULT 'Zonaro.ro este în pregătire',
+  maintenance_description text NOT NULL DEFAULT 'În curând firmele vor putea crea profiluri.',
+  waitlist_button_text text NOT NULL DEFAULT 'Înscrie-te pe lista de așteptare',
+  updated_at timestamptz DEFAULT now()
+);
+INSERT INTO site_settings (id) VALUES ('main') ON CONFLICT (id) DO NOTHING;
+ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "read" ON site_settings FOR SELECT USING (true);
+CREATE POLICY "admin_update" ON site_settings FOR UPDATE
+  USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
+
+CREATE TABLE IF NOT EXISTS waitlist (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL, email text NOT NULL UNIQUE,
+  phone text, company_name text, company_category text, city text,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "insert" ON waitlist FOR INSERT WITH CHECK (true);
+CREATE POLICY "admin_read" ON waitlist FOR SELECT
+  USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));`}
+              </pre>
+            </div>
+          </details>
+        </div>
+      </div>
+    );
   }
 
   return (
