@@ -7,6 +7,8 @@ import { HomePricingSection } from '@/components/home/HomePricingSection';
 import { CheckCircle2, Star, Building2, Users, MapPin, Search, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { getSiteSettings } from '@/lib/siteSettings';
+import { WaitlistButton } from '@/components/ui/WaitlistModal';
 
 export const metadata: Metadata = {
   title: 'ZonaRo — Directorul de Firme și Meșteri din Estul României',
@@ -44,11 +46,32 @@ const AVANTAJE = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const settings = await getSiteSettings();
+  const mm = settings.maintenance_mode;
+
   return (
     <>
       {/* Hero */}
       <HeroSearch />
+
+      {/* Maintenance notice — shown only when maintenance mode is active */}
+      {mm && (
+        <section className="bg-amber-50 border-b border-amber-100 py-10 px-4">
+          <div className="container-page max-w-2xl mx-auto text-center">
+            <p className="text-amber-700 text-xs font-bold uppercase tracking-widest mb-3">
+              🚧 Platformă în pregătire
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+              {settings.maintenance_title}
+            </h2>
+            <p className="text-gray-500 mb-7 leading-relaxed">
+              {settings.maintenance_description}
+            </p>
+            <WaitlistButton buttonText={settings.waitlist_button_text} size="lg" />
+          </div>
+        </section>
+      )}
 
       {/* Stats bar */}
       <section className="bg-white border-b border-gray-100">
@@ -207,26 +230,40 @@ export default function HomePage() {
       <section className="py-16 bg-gradient-to-r from-brand-800 to-brand-700">
         <div className="container-page text-center">
           <h2 className="text-3xl font-bold text-white mb-3">
-            Ai o firmă sau ești meșter?
+            {mm ? 'Fii primul la lansare' : 'Ai o firmă sau ești meșter?'}
           </h2>
           <p className="text-blue-200 mb-8 text-lg max-w-xl mx-auto">
-            Listează-te gratuit pe ZonaRo și ajunge la mii de clienți noi în fiecare lună.
+            {mm
+              ? 'Înscrie-te acum și îți rezervi accesul prioritar când platforma se lansează.'
+              : 'Listează-te gratuit pe ZonaRo și ajunge la mii de clienți noi în fiecare lună.'}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/inregistrare">
-              <Button size="lg" variant="secondary" className="px-8">
-                Înregistrează-te Gratuit
-              </Button>
-            </Link>
-            <Link href="/cauta">
-              <Button size="lg" variant="outline" className="px-8 border-white text-white hover:bg-white/10">
-                Descoperă Platforma
-              </Button>
-            </Link>
+            {mm ? (
+              <WaitlistButton
+                buttonText={settings.waitlist_button_text}
+                buttonClassName="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-brand-800 font-semibold rounded-xl hover:bg-gray-100 transition-colors text-base"
+                size="lg"
+              />
+            ) : (
+              <>
+                <Link href="/inregistrare">
+                  <Button size="lg" variant="secondary" className="px-8">
+                    Înregistrează-te Gratuit
+                  </Button>
+                </Link>
+                <Link href="/cauta">
+                  <Button size="lg" variant="outline" className="px-8 border-white text-white hover:bg-white/10">
+                    Descoperă Platforma
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
-          <p className="mt-4 text-xs text-blue-300">
-            Fără card de credit. Plan gratuit pentru totdeauna.
-          </p>
+          {!mm && (
+            <p className="mt-4 text-xs text-blue-300">
+              Fără card de credit. Plan gratuit pentru totdeauna.
+            </p>
+          )}
         </div>
       </section>
 

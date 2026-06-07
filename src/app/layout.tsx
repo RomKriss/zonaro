@@ -6,6 +6,7 @@ import { Footer } from '@/components/layout/Footer';
 import { CookieBanner } from '@/components/ui/CookieBanner';
 import { PromoBanner } from '@/components/ui/PromoBanner';
 import { TypographyInjector } from '@/components/layout/TypographyInjector';
+import { MaintenanceBanner } from '@/components/ui/MaintenanceBanner';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col">
         <PromoBanner />
         <Header />
+        <MaintenanceBanner />
         <main className="flex-1">{children}</main>
         <Footer />
         <CookieBanner />

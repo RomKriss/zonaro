@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stripe, STRIPE_PRICES, StripePlan, StripeBillingPeriod } from '@/lib/stripe';
+import { getSiteSettings } from '@/lib/siteSettings';
 import { z } from 'zod';
 
 // ID-ul coupon-ului de lansare 50% pentru Plus (3 luni)
@@ -15,7 +16,14 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const [settings, supabase] = await Promise.all([getSiteSettings(), createClient()]);
+  if (settings.maintenance_mode) {
+    return NextResponse.json(
+      { error: 'Platforma este temporar în pregătire. Checkout-ul nu este disponibil momentan.' },
+      { status: 503 },
+    );
+  }
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Neautorizat' }, { status: 401 });
 
