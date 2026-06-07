@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: post.seoDescription ?? post.excerpt ?? '',
       type: 'article',
       publishedTime: post.publishedAt,
-      images: post.mainImage
+      images: post.mainImage?.asset
         ? [{ url: urlFor(post.mainImage).width(1200).height(630).url() }]
         : [],
     },
@@ -87,7 +87,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     description: post.excerpt ?? '',
     datePublished: post.publishedAt,
     publisher: { '@type': 'Organization', name: 'ZonaRo', url: 'https://zonaro.ro' },
-    image: post.mainImage ? urlFor(post.mainImage).width(1200).height(630).url() : undefined,
+    image: post.mainImage?.asset ? urlFor(post.mainImage).width(1200).height(630).url() : undefined,
   };
 
   return (
@@ -133,7 +133,7 @@ export default async function BlogPostPage({ params }: PageProps) {
             </p>
           )}
 
-          {post.mainImage && (
+          {post.mainImage?.asset && (
             <div className="relative w-full rounded-2xl overflow-hidden mb-10" style={{ aspectRatio: '16/9' }}>
               <Image
                 src={urlFor(post.mainImage).width(900).height(506).url()}

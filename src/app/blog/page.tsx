@@ -48,7 +48,7 @@ export default async function BlogPage() {
                 href={`/blog/${post.slug.current}`}
                 className="group card overflow-hidden hover:shadow-md transition-shadow"
               >
-                {post.mainImage && (
+                {post.mainImage?.asset && (
                   <div className="relative h-48 w-full overflow-hidden bg-gray-100">
                     <Image
                       src={urlFor(post.mainImage).width(640).height(360).url()}
