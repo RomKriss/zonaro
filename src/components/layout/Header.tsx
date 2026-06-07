@@ -67,6 +67,9 @@ export function Header() {
             <Link href="/cauta?category=constructii-renovari" className="hover:text-brand-700 transition-colors">
               Categorii
             </Link>
+            <Link href="/blog" className="hover:text-brand-700 transition-colors">
+              Blog
+            </Link>
             <Link href="/preturi" className="hover:text-brand-700 transition-colors">
               Prețuri
             </Link>
@@ -168,6 +171,9 @@ export function Header() {
         <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-2">
           <Link href="/cauta" className="block py-2.5 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>
             Caută Firme
+          </Link>
+          <Link href="/blog" className="block py-2.5 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>
+            Blog
           </Link>
           <Link href="/preturi" className="block py-2.5 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>
             Prețuri
