@@ -10,7 +10,7 @@ import { PageLoader } from '@/components/ui/LoadingSpinner';
 import {
   CheckCircle2, Zap, Crown, Star, Rocket,
   ArrowRight, AlertTriangle, ExternalLink,
-  CreditCard, Clock, TrendingUp, X, Check
+  CreditCard, Clock, TrendingUp, X, Check, Download, FileText
 } from 'lucide-react';
 import { PLANS, getPlanConfig, formatDate, cn } from '@/lib/utils';
 import type { Business } from '@/types';
@@ -66,6 +66,8 @@ export default function AbonamentPage() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -84,6 +86,13 @@ export default function AbonamentPage() {
         setSubscription(sub);
       }
       setLoading(false);
+      // Încarcă facturile în background
+      setInvoicesLoading(true);
+      fetch('/api/stripe/invoices')
+        .then((r) => r.json())
+        .then((d) => setInvoices(d.invoices ?? []))
+        .catch(() => {})
+        .finally(() => setInvoicesLoading(false));
     })();
   }, []);
 
@@ -245,6 +254,74 @@ export default function AbonamentPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Facturi */}
+      <div className="card p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <FileText className="h-5 w-5 text-gray-400" />
+          <h2 className="font-semibold text-gray-900">Istoricul facturilor</h2>
+        </div>
+
+        {invoicesLoading ? (
+          <div className="text-sm text-gray-400 text-center py-6">Se încarcă facturile...</div>
+        ) : invoices.length === 0 ? (
+          <div className="text-sm text-gray-500 text-center py-6 bg-gray-50 rounded-xl">
+            Nu există facturi de afișat.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider pb-3 pr-4">Factură</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider pb-3 pr-4">Data</th>
+                  <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider pb-3 pr-4">Sumă</th>
+                  <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wider pb-3 pr-4">Status</th>
+                  <th className="pb-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="py-3 pr-4 font-mono text-xs text-gray-600">{inv.number}</td>
+                    <td className="py-3 pr-4 text-gray-700">
+                      {new Date(inv.date * 1000).toLocaleDateString('ro-RO', {
+                        day: 'numeric', month: 'long', year: 'numeric',
+                      })}
+                    </td>
+                    <td className="py-3 pr-4 text-right font-semibold text-gray-900">
+                      {inv.amount.toFixed(2)} {inv.currency}
+                    </td>
+                    <td className="py-3 pr-4 text-center">
+                      <span className={cn(
+                        'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
+                        inv.status === 'paid'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-600'
+                      )}>
+                        {inv.status === 'paid' ? 'Plătit' : 'Neplătit'}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      {inv.pdf_url && (
+                        <a
+                          href={inv.pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-brand-700 hover:text-brand-900 font-medium hover:underline"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          PDF
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Upgrade — doar dacă nu e Elite */}
